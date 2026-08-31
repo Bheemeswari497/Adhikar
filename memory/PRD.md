@@ -28,12 +28,14 @@ Build a ~50% functional hackathon prototype that digitizes scanned Indian land r
 ## Implemented (June 2026)
 - Full 5-stage pipeline working end-to-end; tested by testing agent (iteration_1: 17/18 backend, 100% frontend; the 1 failure — sample_4 OCR misread — fixed by regenerating sample with khasra 103/2 and re-verified)
 - Auto-seed 10 MP records on startup: 2 near-duplicates (101/1), 1 area mismatch (103/2), 1 no-GIS (999/9), 6 verified
+- CSV export: GET /api/export/csv (UTF-8 BOM, flags joined), "Export CSV" button on dashboard
+- Hindi/Devanagari OCR: sample_5_hindi_khatauni.png (PIL + FreeSans with raqm shaping), easyocr Reader(['hi','en']) cached per-lang, Hindi upload toggle (Form lang=hi), bilingual extraction regex (स्वामी/खसरा/ग्राम/तहसील/क्षेत्रफल/प्रकार labels, Devanagari digit transliteration, ः-as-colon and lost-conjunct tolerance) — verified: extracts रामलाल पाटीदार / 104/1 / 2.95 ha → "verified"
+- Ops note: EasyOCR hi model download once hit disk-full which crashed mongodb (restarted via supervisorctl); models cached at ~/.EasyOCR/model
 
 ## Explicitly Skipped (future work, per user)
-- Auth / role-based access, real satellite boundary extraction, multi-language OCR (Hindi), production security/scaling
+- Auth / role-based access, real satellite boundary extraction, production security/scaling
 
 ## Backlog
-- P1: Hindi/Devanagari OCR demo sample (easyocr 'hi')
 - P1: Fuzzy khasra matching against parcel index to tolerate OCR noise
 - P2: Aggregate multiple flags per record (currently first duplicate flag short-circuits)
-- P2: Audit trail of officer decisions; export to CSV
+- P2: Audit trail of officer decisions

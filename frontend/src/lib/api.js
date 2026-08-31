@@ -9,9 +9,10 @@ export const fetchRecord = (id) => axios.get(`${API}/records/${id}`).then((r) =>
 export const fetchParcels = () => axios.get(`${API}/parcels`).then((r) => r.data);
 export const fetchSamples = () => axios.get(`${API}/samples`).then((r) => r.data);
 export const processSample = (name) => axios.post(`${API}/samples/${name}/process`).then((r) => r.data);
-export const uploadDocument = (file) => {
+export const uploadDocument = (file, lang = "en") => {
   const fd = new FormData();
   fd.append("file", file);
+  fd.append("lang", lang);
   return axios.post(`${API}/upload`, fd).then((r) => r.data);
 };
 export const decideRecord = (id, action) =>

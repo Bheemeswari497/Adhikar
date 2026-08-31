@@ -1,4 +1,6 @@
 import asyncio
+import csv
+import io
 import logging
 import os
 import re
@@ -12,7 +14,7 @@ from dotenv import load_dotenv
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException
+from fastapi import FastAPI, APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import Response
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
@@ -21,7 +23,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from seed_data import PARCELS_GEOJSON, SEED_RECORDS
 from storage import APP_NAME, MIME_TYPES, init_storage, put_object, get_object
-from generate_samples import generate_all, SAMPLES
+from generate_samples import generate_all, SAMPLE_NAMES
 
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
@@ -38,18 +40,18 @@ logger = logging.getLogger("adhikar")
 PARCEL_INDEX = {f["properties"]["survey_number"]: f for f in PARCELS_GEOJSON["features"]}
 
 # ---------- OCR ----------
-_reader = None
+_readers = {}
 
 
-def get_reader():
-    global _reader
-    if _reader is None:
+def get_reader(lang: str = "en"):
+    if lang not in _readers:
         import easyocr
-        _reader = easyocr.Reader(['en'], gpu=False, verbose=False)
-    return _reader
+        langs = ['hi', 'en'] if lang == "hi" else ['en']
+        _readers[lang] = easyocr.Reader(langs, gpu=False, verbose=False)
+    return _readers[lang]
 
 
-def run_ocr(path: Path) -> str:
+def run_ocr(path: Path, lang: str = "en") -> str:
     if path.suffix.lower() == ".pdf":
         import fitz
         doc = fitz.open(str(path))
@@ -58,31 +60,34 @@ def run_ocr(path: Path) -> str:
         pix.save(str(png_path))
         doc.close()
         path = png_path
-    lines = get_reader().readtext(str(path), detail=0, paragraph=False)
+    lines = get_reader(lang).readtext(str(path), detail=0, paragraph=False)
     return "\n".join(lines)
 
 
 # ---------- Field extraction (regex first pass) ----------
 def _clean(s):
-    return re.sub(r"[^A-Za-z0-9/ .]", "", s).strip() if s else None
+    return re.sub(r"[^A-Za-z0-9/ .\u0900-\u097F]", "", s).strip(" ः.") if s else None
+
+
+DEVA_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
 
 
 def extract_fields(text: str) -> dict:
-    t = text
+    t = text.translate(DEVA_DIGITS)
     fields = {}
-    m = re.search(r"(?:owner\s*name|name\s*of\s*owner|owner)\s*[:;\-]?\s*(.+)", t, re.I)
+    m = re.search(r"(?:owner\s*name|name\s*of\s*owner|owner|(?:भूमि)?स्?वामी(?:\s*का)?(?:\s*नाम)?)\s*[:;ः\-]?\s*(.+)", t, re.I)
     fields["owner_name"] = _clean(m.group(1)) if m else None
-    m = re.search(r"(?:khasra|survey)\s*(?:no|number)?\.?\s*[:;\-]?\s*(\d+\s*/?\s*\d*)", t, re.I)
+    m = re.search(r"(?:khasra|survey|खसरा)[^\d]{0,25}(\d+\s*/?\s*\d*)", t, re.I | re.S)
     fields["survey_number"] = m.group(1).replace(" ", "").rstrip("/") if m else None
-    m = re.search(r"village\s*[:;\-]?\s*([A-Za-z ]+)", t, re.I)
+    m = re.search(r"(?:village|ग्?राम)\s*[:;ः\-]?\s*([A-Za-z\u0900-\u097F ]+)", t, re.I)
     fields["village"] = _clean(m.group(1)) if m else None
-    m = re.search(r"tehsil\s*[:;\-]?\s*([A-Za-z ]+)", t, re.I)
+    m = re.search(r"(?:tehsil|तहसील)\s*[:;ः\-]?\s*([A-Za-z\u0900-\u097F ]+)", t, re.I)
     fields["tehsil"] = _clean(m.group(1)) if m else None
-    m = re.search(r"area\s*[:;\-]?\s*(\d+[.,]?\d*)\s*(?:ha|hect)", t, re.I)
+    m = re.search(r"(?:area|क्?षेत्?रफल)\s*[:;ः\-]?\s*(\d+[.,]?\d*)\s*(?:ha|hect|हे)", t, re.I)
     if not m:
-        m = re.search(r"area\s*[:;\-]?\s*(\d+[.,]?\d*)", t, re.I)
+        m = re.search(r"(?:area|क्?षेत्?रफल)\s*[:;ः\-]?\s*(\d+[.,]?\d*)", t, re.I)
     fields["area_ha"] = float(m.group(1).replace(",", ".")) if m else None
-    m = re.search(r"land\s*type\s*[:;\-]?\s*([A-Za-z ]+)", t, re.I)
+    m = re.search(r"(?:land\s*type|(?:भूमि\s*(?:का)?\s*)?प्?रकार)\s*[:;ः\-]?\s*([A-Za-z\u0900-\u097F ]+)", t, re.I)
     fields["land_type"] = _clean(m.group(1)) if m else None
     return fields
 
@@ -160,7 +165,7 @@ async def root():
 
 
 @api_router.post("/upload")
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(file: UploadFile = File(...), lang: str = Form("en")):
     ext = Path(file.filename or "doc.png").suffix.lower()
     if ext not in MIME_TYPES:
         raise HTTPException(400, "Only JPG, PNG or PDF files are supported")
@@ -178,7 +183,7 @@ async def upload_document(file: UploadFile = File(...)):
         storage_path = None
 
     try:
-        ocr_text = await asyncio.to_thread(run_ocr, tmp_path)
+        ocr_text = await asyncio.to_thread(run_ocr, tmp_path, lang if lang == "hi" else "en")
     except Exception as e:
         logger.exception("OCR failed")
         raise HTTPException(500, f"OCR failed: {e}")
@@ -188,17 +193,18 @@ async def upload_document(file: UploadFile = File(...)):
 
 @api_router.get("/samples")
 async def list_samples():
-    return [{"name": s[0], "url": f"/api/files/{APP_NAME}/samples/{s[0]}"} for s in SAMPLES]
+    return [{"name": n, "url": f"/api/files/{APP_NAME}/samples/{n}"} for n in SAMPLE_NAMES]
 
 
 @api_router.post("/samples/{name}/process")
 async def process_sample(name: str):
-    if name not in [s[0] for s in SAMPLES]:
+    if name not in SAMPLE_NAMES:
         raise HTTPException(404, "Sample not found")
     local = TMP_DIR / name
     if not local.exists():
         generate_all(TMP_DIR)
-    ocr_text = await asyncio.to_thread(run_ocr, local)
+    lang = "hi" if "hindi" in name else "en"
+    ocr_text = await asyncio.to_thread(run_ocr, local, lang)
     fields = extract_fields(ocr_text)
     return await create_record(fields, ocr_text, f"{APP_NAME}/samples/{name}")
 
@@ -210,6 +216,24 @@ async def serve_file(path: str):
     except Exception:
         raise HTTPException(404, "File not found")
     return Response(content=data, media_type=content_type)
+
+
+@api_router.get("/export/csv")
+async def export_csv():
+    records = await db.records.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    buf = io.StringIO()
+    cols = ["id", "owner_name", "survey_number", "village", "tehsil", "area_ha",
+            "land_type", "parcel_area_ha", "status", "flags", "created_at"]
+    writer = csv.DictWriter(buf, fieldnames=cols, extrasaction="ignore")
+    writer.writeheader()
+    for r in records:
+        r["flags"] = "; ".join(r.get("flags") or [])
+        writer.writerow(r)
+    return Response(
+        content="\ufeff" + buf.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=adhikar_records.csv"},
+    )
 
 
 @api_router.get("/records")

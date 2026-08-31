@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowUpDown, RefreshCw } from "lucide-react";
-import { fetchRecords, reseed } from "@/lib/api";
+import { ArrowUpDown, Download, RefreshCw } from "lucide-react";
+import { fetchRecords, reseed, API } from "@/lib/api";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 
@@ -67,9 +67,16 @@ export default function DashboardPage() {
           <h2 className="font-heading text-2xl font-bold tracking-tight">Officer Review Dashboard</h2>
           <p className="text-sm text-zinc-500">Digitized land records · Village Rampur Kalan, Tehsil Huzur, Bhopal</p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleReseed} data-testid="reseed-button">
-          <RefreshCw size={14} className="mr-1" /> Reset demo data
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" asChild data-testid="export-csv-button">
+            <a href={`${API}/export/csv`} download>
+              <Download size={14} className="mr-1" /> Export CSV
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleReseed} data-testid="reseed-button">
+            <RefreshCw size={14} className="mr-1" /> Reset demo data
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">

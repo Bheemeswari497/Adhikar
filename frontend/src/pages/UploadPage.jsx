@@ -17,6 +17,7 @@ export default function UploadPage() {
   const [samples, setSamples] = useState([]);
   const [busy, setBusy] = useState(null);
   const [result, setResult] = useState(null);
+  const [hindi, setHindi] = useState(false);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export default function UploadPage() {
 
   const onFile = (e) => {
     const f = e.target.files?.[0];
-    if (f) run(() => uploadDocument(f), "upload");
+    if (f) run(() => uploadDocument(f, hindi ? "hi" : "en"), "upload");
     e.target.value = "";
   };
 
@@ -61,6 +62,17 @@ export default function UploadPage() {
           <p className="text-xs text-zinc-400 mt-1">JPG, PNG or PDF · first OCR run may take ~30s</p>
           <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden" onChange={onFile} data-testid="file-input" />
         </div>
+
+        <label className="flex items-center gap-2 text-sm text-zinc-700 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={hindi}
+            onChange={(e) => setHindi(e.target.checked)}
+            data-testid="hindi-toggle"
+            className="accent-zinc-900 w-4 h-4"
+          />
+          Document is in Hindi (Devanagari) — uses the Hindi OCR model
+        </label>
 
         <div>
           <h3 className="text-xs uppercase tracking-[0.1em] text-zinc-500 mb-2">Or try a sample document</h3>
