@@ -1,0 +1,93 @@
+{
+  "theme_strategy": {
+    "mode": "light",
+    "justification": "Light mode maximizes legibility for OCR scanning, dense data tables, and government-style administrative dashboards. It aligns with the 'no-frills, speed-first' constraint."
+  },
+  "typography": {
+    "headings": {
+      "family": "Work Sans, sans-serif",
+      "weights": ["600", "700"],
+      "usage": "Use for page titles (Adhikar), table headers, and section labels."
+    },
+    "body": {
+      "family": "IBM Plex Sans, sans-serif",
+      "weights": ["400", "500"],
+      "usage": "Use for all OCR text, data table rows, and form fields to give a highly legible, tabular feel."
+    },
+    "scales": {
+      "h1": "text-2xl sm:text-3xl tracking-tight font-bold",
+      "h2": "text-xl sm:text-2xl tracking-tight font-semibold",
+      "h3": "text-lg sm:text-xl font-semibold",
+      "body": "text-sm",
+      "small": "text-xs uppercase tracking-[0.1em]"
+    }
+  },
+  "colors": {
+    "archetype": "Swiss & High-Contrast (Archetype 4)",
+    "palette": {
+      "background": "#FFFFFF",
+      "surface": "#F9FAFB",
+      "border": "#E5E7EB",
+      "primary": "#18181B",
+      "primary_foreground": "#FFFFFF",
+      "text_main": "#111827",
+      "text_muted": "#6B7280"
+    },
+    "semantic": {
+      "verified": {
+        "bg": "#D1FAE5",
+        "text": "#065F46",
+        "border": "#34D399"
+      },
+      "duplicate": {
+        "bg": "#FEF3C7",
+        "text": "#92400E",
+        "border": "#FBBF24"
+      },
+      "area_mismatch": {
+        "bg": "#FEE2E2",
+        "text": "#B91C1C",
+        "border": "#F87171"
+      },
+      "no_gis": {
+        "bg": "#FEE2E2",
+        "text": "#B91C1C",
+        "border": "#F87171"
+      }
+    }
+  },
+  "layout_and_spacing": {
+    "strategy": "High Density Grid (Mode B) for Admin Panels",
+    "spacing_scale": "Use p-4 and p-6 generously for container padding. For dense tables, use tight padding py-2 px-4.",
+    "dashboard_grid": "grid-cols-1 md:grid-cols-12 gap-6",
+    "review_pane_grid": {
+      "map_section": "col-span-12 lg:col-span-4",
+      "ocr_section": "col-span-12 lg:col-span-4",
+      "form_section": "col-span-12 lg:col-span-4"
+    },
+    "containers": "Flat, cardless look. Use border border-zinc-200 rounded-md bg-white. NO shadows to maintain speed/no-frills."
+  },
+  "components": {
+    "buttons": "Slightly rounded (rounded-md). High contrast (Black/White). Avoid gradients.",
+    "badges": "Flat background with 1px border matching the semantic color. Use for Validation Statuses.",
+    "tables": "Shadcn Table. Clean lines, text-sm, hover:bg-zinc-50.",
+    "inputs": "Shadcn Input/Textarea. border-zinc-300, focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900.",
+    "map": "Leaflet container must have z-10 (not higher, to avoid breaking dropdowns), rounded-md, border border-zinc-200. Ensure it has a defined height (e.g., h-[500px] or h-full min-h-[400px])."
+  },
+  "image_urls": {
+    "scanned_document_seed": {
+      "url": "https://images.unsplash.com/photo-1528459199957-0ff28496a7f6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNTl8MHwxfHNlYXJjaHwxfHxzY2FubmVkJTIwZG9jdW1lbnQlMjB0ZXh0fGVufDB8fHx8MTc4ODE2MTUwN3ww&ixlib=rb-4.1.0&q=85",
+      "description": "A scanned printed text page to be used as a seed image placeholder for the Land Record OCR preview."
+    }
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "DO NOT use generic `transition: all`. Target specific properties like `transition-colors` or `transition-transform`.",
+    "NEVER use fully transparent backgrounds for overlays, dropdowns, or headers.",
+    "Every interactive element MUST include a `data-testid` attribute (e.g., `data-testid='approve-record-button'`).",
+    "Do not use AI emoji characters (🤖, 💡, etc.) anywhere in the UI. Use Lucide icons instead.",
+    "Ensure map components (Leaflet) are initialized with proper z-index context so they do not overlap Shadcn modals/dialogs.",
+    "Adhere strictly to the chosen font pairing: Work Sans for headers, IBM Plex Sans for body. Do not default to Inter for headings.",
+    "Make the Officer Review Dashboard table filterable by Status.",
+    "For the Side-by-Side review, ensure containers are scrollable independently (overflow-y-auto) if content is tall, so the overall page doesn't scroll excessively."
+  ]
+}

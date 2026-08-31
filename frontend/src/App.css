@@ -1,0 +1,7 @@
+.font-heading {
+  font-family: "Work Sans", sans-serif;
+}
+
+.leaflet-container {
+  z-index: 10;
+}
