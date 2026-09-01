@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Check, X, AlertTriangle, FileText } from "lucide-react";
 import { fetchRecord, fetchParcels, decideRecord, BACKEND_URL } from "@/lib/api";
 import { ParcelMap } from "@/components/ParcelMap";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -24,49 +24,55 @@ export default function RecordDetailPage() {
     fetchParcels().then(setParcels);
   }, [id]);
 
-  if (!record) return <p className="text-zinc-400 text-sm">Loading…</p>;
-
-  const parcel = parcels?.features.find((f) => f.properties.survey_number === record.survey_number);
-  const parcelOnly = parcel ? { type: "FeatureCollection", features: [parcel] } : null;
-
-  const decide = async (action) => {
-    const updated = await decideRecord(id, action);
-    setRecord(updated);
-    toast.success(`Record ${action}d`);
+  const handleDecision = async (action) => {
+    try {
+      const updated = await decideRecord(id, action);
+      setRecord(updated);
+      toast.success(`Record ${action}d`);
+    } catch {
+      toast.error("Failed to update status");
+    }
   };
 
+  if (!record) return <div className="p-8 text-center text-zinc-500">Loading record…</div>;
+
+  const matchedFeatures = parcels?.features?.filter(
+    (f) =>
+      record.survey_number &&
+      (String(f.properties.survey_number) === String(record.survey_number) ||
+        String(f.properties.khasra_no) === String(record.survey_number))
+  ) || [];
+
+  const parcelOnly =
+    matchedFeatures.length > 0
+      ? {
+          ...parcels,
+          features: matchedFeatures,
+        }
+      : null;
+
   return (
-    <div data-testid="record-detail-page">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <Link to="/" className="text-zinc-500 hover:text-zinc-900 transition-colors" data-testid="back-to-dashboard">
-            <ArrowLeft size={20} />
-          </Link>
-          <div>
-            <h2 className="font-heading text-2xl font-bold tracking-tight">
-              {record.owner_name || "Unknown owner"} · Khasra {record.survey_number || "?"}
-            </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <StatusBadge status={record.status} />
-              <span className="text-xs text-zinc-400">Record {record.id.slice(0, 8)}</span>
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => decide("approve")} data-testid="approve-button" className="bg-emerald-700 hover:bg-emerald-800">
-            <Check size={16} className="mr-1" /> Approve
+    <div data-testid="record-detail-page" className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Link to="/records" className="inline-flex items-center text-sm text-zinc-600 hover:text-zinc-900">
+          <ArrowLeft size={16} className="mr-1" /> Back to records
+        </Link>
+        <div className="flex items-center gap-2">
+          <StatusBadge status={record.status} />
+          <Button size="sm" variant="outline" className="text-emerald-700 hover:bg-emerald-50" onClick={() => handleDecision("approve")}>
+            <Check size={14} className="mr-1" /> Approve
           </Button>
-          <Button onClick={() => decide("reject")} variant="destructive" data-testid="reject-button">
-            <X size={16} className="mr-1" /> Reject
+          <Button size="sm" variant="outline" className="text-rose-700 hover:bg-rose-50" onClick={() => handleDecision("reject")}>
+            <X size={14} className="mr-1" /> Reject
           </Button>
         </div>
       </div>
 
       {record.flags?.length > 0 && (
-        <div className="border border-amber-300 bg-amber-50 rounded-md p-4 mb-4" data-testid="flag-reasons">
-          <p className="text-xs uppercase tracking-[0.1em] text-amber-700 mb-2 flex items-center gap-1">
+        <div className="border border-amber-300 bg-amber-50 p-4 rounded-md" data-testid="record-flags-panel">
+          <div className="flex items-center gap-1.5 text-amber-900 font-semibold text-xs uppercase tracking-[0.1em] mb-1">
             <AlertTriangle size={14} /> Why this record was flagged
-          </p>
+          </div>
           <ul className="text-sm text-amber-900 list-disc pl-4 space-y-1">
             {record.flags.map((f, i) => <li key={i}>{f}</li>)}
           </ul>
@@ -80,7 +86,24 @@ export default function RecordDetailPage() {
           {record.source_image && (
             <div className="border-t border-zinc-200 p-3">
               <p className="text-xs text-zinc-500 mb-2">Source document</p>
-              <img src={`${BACKEND_URL}/api/files/${record.source_image}`} alt="source" className="rounded border border-zinc-200 max-h-48 w-full object-cover object-top" />
+              {record.source_image.toLowerCase().endsWith(".pdf") ? (
+                <div className="rounded border border-zinc-200 bg-zinc-50 p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-zinc-700 font-medium truncate">
+                    <FileText size={16} className="text-red-500 shrink-0" />
+                    <span className="truncate">{record.source_image.split("/").pop()}</span>
+                  </div>
+                  <a
+                    href={`${BACKEND_URL}/api/files/${record.source_image}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold shrink-0 ml-2"
+                  >
+                    View PDF ↗
+                  </a>
+                </div>
+              ) : (
+                <img src={`${BACKEND_URL}/api/files/${record.source_image}`} alt="source" className="rounded border border-zinc-200 max-h-48 w-full object-cover object-top" />
+              )}
             </div>
           )}
         </div>
@@ -102,8 +125,8 @@ export default function RecordDetailPage() {
           {parcelOnly ? (
             <ParcelMap parcels={parcelOnly} records={[record]} highlightSurvey={record.survey_number} height="380px" />
           ) : (
-            <div className="h-[380px] flex items-center justify-center text-sm text-red-600 bg-red-50 border border-red-200 rounded-md" data-testid="no-gis-panel">
-              No parcel with khasra {record.survey_number || "?"} exists in the GIS layer
+            <div className="h-[380px] flex items-center justify-center text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-4 text-center" data-testid="no-gis-panel">
+              No matching parcel polygon found in GIS cadastral map for khasra {record.survey_number || "?"}
             </div>
           )}
         </div>

@@ -83,6 +83,7 @@ android-sdk/
 .env
 .env.*
 *.env
-credentials.json
 *.key
 .credentials
+backend/tmp_samples/
+*.log

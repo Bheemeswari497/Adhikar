@@ -59,7 +59,16 @@ export const ParcelMap = ({ parcels, records = [], highlightSurvey, onSelect, he
         layer.on("click", () => onSelect && onSelect(f));
       },
     }).addTo(map);
-    map.fitBounds(layerRef.current.getBounds(), { padding: [24, 24] });
+    try {
+      const bounds = layerRef.current.getBounds();
+      if (bounds && bounds.isValid && bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [24, 24], maxZoom: 17 });
+      } else {
+        map.setView([23.259933, 77.412615], 14);
+      }
+    } catch {
+      map.setView([23.259933, 77.412615], 14);
+    }
   }, [parcels, records, highlightSurvey, onSelect]);
 
   return (

@@ -17,4 +17,7 @@ export const uploadDocument = (file, lang = "en") => {
 };
 export const decideRecord = (id, action) =>
   axios.post(`${API}/records/${id}/decision`, { action }).then((r) => r.data);
+export const updateRecord = (id, updateData) =>
+  axios.patch(`${API}/records/${id}`, updateData).then((r) => r.data);
 export const reseed = () => axios.post(`${API}/seed`).then((r) => r.data);
+

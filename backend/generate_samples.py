@@ -1,12 +1,48 @@
+import os
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
-FONT = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
-FONT_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
-FONT_DEVA = "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
-FONT_DEVA_BOLD = "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"
-
 HINDI_SAMPLE = "sample_5_hindi_khatauni.png"
+
+def _load_font(bold: bool = False, deva: bool = False, size: int = 24):
+    candidates = []
+    if deva:
+        if bold:
+            candidates = [
+                "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+                "C:/Windows/Fonts/NirmalaB.ttc", "NirmalaB.ttc", "NirmalaB.ttf",
+                "C:/Windows/Fonts/Nirmala.ttc", "Nirmala.ttc", "Nirmala.ttf",
+                "C:/Windows/Fonts/mangal.ttf", "mangal.ttf",
+                "C:/Windows/Fonts/aparajb.ttf", "aparajb.ttf"
+            ]
+        else:
+            candidates = [
+                "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+                "C:/Windows/Fonts/Nirmala.ttc", "Nirmala.ttc", "Nirmala.ttf",
+                "C:/Windows/Fonts/mangal.ttf", "mangal.ttf",
+                "C:/Windows/Fonts/aparaj.ttf", "aparaj.ttf"
+            ]
+    else:
+        if bold:
+            candidates = [
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                "C:/Windows/Fonts/arialbd.ttf", "arialbd.ttf",
+                "C:/Windows/Fonts/calibrib.ttf", "calibrib.ttf",
+                "C:/Windows/Fonts/segoeuib.ttf", "segoeuib.ttf"
+            ]
+        else:
+            candidates = [
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                "C:/Windows/Fonts/arial.ttf", "arial.ttf",
+                "C:/Windows/Fonts/calibri.ttf", "calibri.ttf",
+                "C:/Windows/Fonts/segoeui.ttf", "segoeui.ttf"
+            ]
+    for c in candidates:
+        try:
+            return ImageFont.truetype(c, size)
+        except Exception:
+            continue
+    return ImageFont.load_default()
 
 SAMPLES = [
     ("sample_1_clean_record.png", "Rajesh Kumar Yadav", "106/2", "2.00", "Agricultural"),
@@ -19,9 +55,9 @@ SAMPLES = [
 def _make(out_dir: Path, fname, owner, khasra, area, land_type):
     img = Image.new("RGB", (920, 700), "#f5f1e8")
     d = ImageDraw.Draw(img)
-    h1 = ImageFont.truetype(FONT_BOLD, 30)
-    h2 = ImageFont.truetype(FONT_BOLD, 24)
-    body = ImageFont.truetype(FONT, 26)
+    h1 = _load_font(bold=True, size=30)
+    h2 = _load_font(bold=True, size=24)
+    body = _load_font(size=26)
     d.rectangle([20, 20, 900, 680], outline="#555", width=3)
     d.text((460, 50), "GOVERNMENT OF MADHYA PRADESH", font=h1, anchor="mm", fill="#222")
     d.text((460, 95), "REVENUE DEPARTMENT", font=h2, anchor="mm", fill="#222")
@@ -51,9 +87,9 @@ def _make(out_dir: Path, fname, owner, khasra, area, land_type):
 def _make_hindi(out_dir: Path):
     img = Image.new("RGB", (920, 700), "#f5efe0")
     d = ImageDraw.Draw(img)
-    h1 = ImageFont.truetype(FONT_DEVA_BOLD, 32)
-    h2 = ImageFont.truetype(FONT_DEVA_BOLD, 26)
-    body = ImageFont.truetype(FONT_DEVA, 28)
+    h1 = _load_font(bold=True, deva=True, size=32)
+    h2 = _load_font(bold=True, deva=True, size=26)
+    body = _load_font(deva=True, size=28)
     d.rectangle([20, 20, 900, 680], outline="#555", width=3)
     d.text((460, 55), "मध्य प्रदेश शासन", font=h1, anchor="mm", fill="#222")
     d.text((460, 100), "राजस्व विभाग", font=h2, anchor="mm", fill="#222")
